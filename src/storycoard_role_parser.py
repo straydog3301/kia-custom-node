@@ -10,7 +10,6 @@ class StoryboardRoleParser:
             "required": {
                 "role_input": ("STRING", {"multiline": False}),
                 "input_mode": (["role_json", "full_json"], {"default": "role_json"}),
-                "execution_trigger": ("STRING", {"forceInput": True, "default": ""}),
             }
         }
 
@@ -20,7 +19,7 @@ class StoryboardRoleParser:
     FUNCTION = "parse_role_data"
     CATEGORY = "🐊自訂"
 
-    def parse_role_data(self, role_input, input_mode="role_json", execution_trigger=""):
+    def parse_role_data(self, role_input, input_mode="role_json"):
         role_items = []
 
         if input_mode == "full_json":
