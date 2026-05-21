@@ -36,7 +36,7 @@ class StoryboardReader:
     OUTPUT_IS_LIST = (True, True, True, True, True, True, False)
     
     FUNCTION = "read_sheet_to_arrays"
-    CATEGORY = "utils/GoogleSheets"
+    CATEGORY = "🐊自訂"
 
     def read_sheet_to_arrays(self, spreadsheet_id, sheet_name, skip_header, execution_trigger=""):
         encoded_sheet_name = urllib.parse.quote(sheet_name)
