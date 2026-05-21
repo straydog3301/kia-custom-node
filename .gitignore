@@ -1,0 +1,9 @@
+# Ignore Python cache directories and compiled files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Byte-compiled / optimized / DLL files
+# (add more patterns if needed)
