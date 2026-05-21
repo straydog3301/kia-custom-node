@@ -22,7 +22,7 @@ class StoryboardInputter:
     CATEGORY = "🐊自訂"
 
     def process_and_send(self, shot_data_input, spreadsheet_id, sheet_name):
-        api_url = "https://script.google.com/macros/s/AKfycbxgXLPRRKauCl_ej6S052tw1caLMekMcLUUynvjBvmKzAtJSGtvmHbXIC1nhs-iuieh8Q/exec"
+        api_url = "https://script.google.com/macros/s/AKfycbz9K-M88yx6D2HS_da5zBwlwuxaA_xa2FPyq2b4Gyn7xTM872Ka953-DEl8B-Diy9s1xQ/exec"
         
         # --- 步驟 1: 字串清洗與解析 ---
         cleaned_input = shot_data_input.strip()

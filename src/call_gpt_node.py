@@ -11,7 +11,7 @@ class CallGPTNode:
         return {
             "required": {
                 "ai_type": (["AuerGPT", "GitHub", "Google"],),
-                "model": (["gpt-5-mini", "gpt-5.2-chat-latest", "gemma-4-26b-a4b-it", "gemma-4-31b-it"],),
+                "model": (["gpt-4.1-mini", "gpt-5-mini", "gpt-5.2-chat-latest", "gemma-4-26b-a4b-it", "gemma-4-31b-it"],),
                 "api_key": ("STRING", {
                     "password": True,
                     "tooltip": "🔐 API 金鑰"
@@ -20,7 +20,6 @@ class CallGPTNode:
                 "user_input": ("STRING", {"help": "請描述您的問題。"}),
                 "img_base64": ("STRING", {"default": ""}),
                 "history": ("INT", {"default": 5, "min": 0, "max": 20}),
-                "randomness": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0}),
                 "max_tokens": ("INT", {"default": 4096, "min": 512, "max": 8192}),
             }
         }
@@ -30,7 +29,7 @@ class CallGPTNode:
     FUNCTION = "generate_prompt"
     CATEGORY = "🐊自訂"
 
-    def generate_prompt(self, ai_type, model, api_key, system_msg, user_input, img_base64, history, randomness, max_tokens):
+    def generate_prompt(self, ai_type, model, api_key, system_msg, user_input, img_base64, history, max_tokens):
         # 驗證 API key
         if not api_key or not isinstance(api_key, str) or len(api_key.strip()) == 0:
             raise ValueError("❌ API Key 不能為空")
@@ -73,7 +72,6 @@ class CallGPTNode:
             response = client.chat.completions.create(
                 messages = _messages,
                 model = _model,
-                temperature = randomness,
                 max_tokens = max_tokens,
                 top_p = 1,
             )

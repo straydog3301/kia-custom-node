@@ -11,43 +11,34 @@ class StoryboardReader:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "spreadsheet_id": ("STRING", {
-                    "multiline": False,
-                }),
-                "sheet_name": ("STRING", {
-                    "multiline": False,
-                }),
-                "skip_header": ("BOOLEAN", {
-                    "default": True, # 預設開啟，跳過第一行的標題
-                    "label_on": "Yes (略過標題)",
-                    "label_off": "No (讀取標題)"
-                }),
+                "spreadsheet_id": ("STRING", {"multiline": False}),
+                "sheet_name": ("STRING", {"multiline": False}),
+                "skip_header": ("BOOLEAN", {"default": True}),
             },
+            "optional": {
+                "execution_trigger": ("STRING", {"forceInput": True, "default": ""}),
+            }
         }
 
-    # 1. 為了讓 ComfyUI 知道「角色」輸出的是陣列物件，將其型態指定為 "LIST" 或是通用 "JSON"
-    # 這裡推薦使用 "JSON" 型態，因為 ComfyUI 的基礎字串類型不支援巢狀陣列，傳出 JSON 物件最為安全通用
-    RETURN_TYPES = ("STRING", "FLOAT", "JSON", "STRING", "STRING", "STRING", "STRING", "STRING")
+    # 🌟 關鍵改動：將角色的返回型態改為 "STRING"，讓 ComfyUI 把它當成普通批次字串運送
+    RETURN_TYPES = ("STRING", "FLOAT", "STRING", "STRING", "STRING", "STRING", "STRING")
     
-    # 2. 更新圓點標籤
     RETURN_NAMES = (
-        "鏡號 (陣列)", 
-        "秒數 (陣列)", 
-        "角色 (巢狀陣列)", # 這裡會輸出如：[["西奧多", "艾戴爾"], [], ["潔西卡"]] 這樣的結構
-        "場景 (陣列)", 
-        "台詞 (陣列)", 
-        "中文說明 (陣列)", 
-        "seedance提詞 (陣列)", 
-        "完整JSON字串"
+        "鏡號", 
+        "秒數", 
+        "角色(JSON字串)", # 每一鏡會輸出如 '["西奧多", "艾戴爾"]' 的字串
+        "場景", 
+        "中文說明", 
+        "seedance提詞", 
+        "完整JSON"
     )
     
-    # 3. 前 7 個依然宣告為 True (讓 ComfyUI 觸發 Batch 批次執行機制)
-    OUTPUT_IS_LIST = (True, True, True, True, True, True, True, False)
+    OUTPUT_IS_LIST = (True, True, True, True, True, True, False)
     
     FUNCTION = "read_sheet_to_arrays"
     CATEGORY = "utils/GoogleSheets"
 
-    def read_sheet_to_arrays(self, spreadsheet_id, sheet_name, skip_header):
+    def read_sheet_to_arrays(self, spreadsheet_id, sheet_name, skip_header, execution_trigger=""):
         encoded_sheet_name = urllib.parse.quote(sheet_name)
         url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}"
 
@@ -59,64 +50,66 @@ class StoryboardReader:
             data = list(reader)
 
             if not data:
-                return ([], [], [], [], [], [], [], "[]")
+                return ([], [], [], [], [], [], "[]")
 
             if skip_header and len(data) > 1:
                 data = data[1:]
 
-            col_id, col_sec, col_char, col_scene, col_lines, col_desc, col_seedance = [], [], [], [], [], [], []
+            col_id, col_sec, col_char, col_scene, col_desc, col_seedance = [], [], [], [], [], []
             json_data = []
 
             for row in data:
-                # 安全補齊機制，確保至少有 7 個欄位
-                row = row + [""] * (7 - len(row))
+                row = row + [""] * (6 - len(row))
 
-                # 處理秒數轉換
-                raw_sec = str(row[1]).strip()
-                raw_sec = raw_sec.replace('s', '').replace('S', '')
+                # 秒數處理
+                raw_sec = str(row[1]).replace('s', '').replace('S', '')
                 try:
-                    sec_float = float(raw_sec) if raw_sec else 0.0
+                    sec_float = float(raw_sec) if raw_sec.strip() else 0.0
                 except ValueError:
                     sec_float = 0.0
 
-                # 🌟 核心魔法：解析角色欄位
+                # 角色處理
                 raw_char = str(row[2]).strip()
-                # 如果開頭是單引號（先前為了防轉型加的），先拔掉它
                 if raw_char.startswith("'"):
                     raw_char = raw_char[1:]
                 
+                # 清洗 Google Sheets CSV 轉義的雙引號
+                if raw_char.startswith('"') and raw_char.endswith('"'):
+                    unescaped = raw_char[1:-1].replace('""', '"')
+                else:
+                    unescaped = raw_char.replace('""', '"')
+
+                # 驗證是否為合法的 JSON 格式，如果不是就幫它包裝，確保它是一串標準的 JSON 陣列字串
                 try:
-                    # 嘗試將字串 '["西奧多", "艾戴爾"]' 還原成 Python 的 list 物件 []
-                    char_list = json.loads(raw_char)
-                    if not isinstance(char_list, list):
-                        char_list = [str(char_list)] if raw_char else []
+                    parsed = json.loads(unescaped)
+                    if isinstance(parsed, list):
+                        char_str_to_send = json.dumps(parsed, ensure_ascii=False)
+                    else:
+                        char_str_to_send = json.dumps([str(parsed)], ensure_ascii=False)
                 except:
-                    # 如果萬一試算表裡面填的不是標準 JSON 陣列（例如手動填了普通的 "西奧多"），則自動幫它包成陣列
-                    char_list = [raw_char] if raw_char else []
+                    if unescaped:
+                        if ',' in unescaped:
+                            char_str_to_send = json.dumps([c.strip() for c in unescaped.split(',')], ensure_ascii=False)
+                        elif '，' in unescaped:
+                            char_str_to_send = json.dumps([c.strip() for c in unescaped.split('，')], ensure_ascii=False)
+                        else:
+                            char_str_to_send = json.dumps([unescaped], ensure_ascii=False)
+                    else:
+                        char_str_to_send = "[]"
 
                 col_id.append(row[0])
                 col_sec.append(sec_float)
-                col_char.append(char_list)     # 🌟 存入真正的 list 物件
+                col_char.append(char_str_to_send) # 🌟 壓入清洗完畢的 JSON 字串，例如 '["潔西卡"]'
                 col_scene.append(row[3])
-                col_lines.append(row[4])
-                col_desc.append(row[5])
-                col_seedance.append(row[6])
+                col_desc.append(row[4])
+                col_seedance.append(row[5])
 
-                # 同時打包一份新版 JSON 格式備用
                 json_data.append({
-                    "鏡號": row[0], 
-                    "秒數": sec_float, 
-                    "角色": char_list, # 這裡也是標準陣列
-                    "場景": row[3],
-                    "台詞": row[4],
-                    "中文說明": row[5],
-                    "seedance提詞": row[6]
+                    "鏡號": row[0], "秒數": sec_float, "角色": json.loads(char_str_to_send),
+                    "場景": row[3], "中文說明": row[4], "seedance提詞": row[5]
                 })
 
-            json_string = json.dumps(json_data, ensure_ascii=False)
-
-            return (col_id, col_sec, col_char, col_scene, col_lines, col_desc, col_seedance, json_string)
+            return (col_id, col_sec, col_char, col_scene, col_desc, col_seedance, json.dumps(json_data, ensure_ascii=False))
 
         except Exception as e:
-            print(f"[GoogleSheetArrayReader] 錯誤: {e}")
-            return ([], [], [], [], [], [], [], f'{{"error": "{str(e)}"}}')
+            return ([], [], [], [], [], [], f'{{"error": "{str(e)}"}}')
