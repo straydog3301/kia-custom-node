@@ -8,7 +8,7 @@ from .src.call_nano_banana import AuerBananaNode
 from .src.auer_image_gen import AuerImageGenNode
 from .src.storycoard_role_parser import StoryboardRoleParser
 from .src.database_path_reader import DatabasePathReader
-
+from .src.folder_image_stitcher import FolderImageStitcher
 
 
 NODE_CLASS_MAPPINGS = {
@@ -21,7 +21,8 @@ NODE_CLASS_MAPPINGS = {
     "StoryboardReader": StoryboardReader,
     "AuerImageGenNode": AuerImageGenNode,
     "StoryboardRoleParser": StoryboardRoleParser,
-    "DatabasePathReader": DatabasePathReader
+    "DatabasePathReader": DatabasePathReader,
+    "FolderImageStitcher": FolderImageStitcher
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -34,7 +35,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "StoryboardReader": "AI分鏡讀表",
     "AuerImageGenNode": "AuerGPT 圖像生成",
     "StoryboardRoleParser": "🔀 角色陣列解析",
-    "DatabasePathReader": "數據圖路徑解析"
+    "DatabasePathReader": "數據圖路徑解析",
+    "FolderImageStitcher": "資料夾圖像拼接"
 }
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
