@@ -1,5 +1,21 @@
 from openai import OpenAI
 import os
+import torch
+import numpy as np
+from PIL import Image
+from io import BytesIO
+import base64
+
+def tensor_to_b64(img_tensor):
+    if isinstance(img_tensor, Image.Image): # 已經是 PIL Image
+        pil_image = img_tensor
+    else:
+        pil_image = Image.fromarray(np.clip(255. * img_tensor.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+    buffered = BytesIO()
+    pil_image.save(buffered, format="PNG")
+    image_bytes = buffered.getvalue()
+    base64_str = base64.b64encode(image_bytes).decode("utf-8")
+    return "data:image/png;base64," + base64_str
 
 class CallGPTNode:
 
@@ -18,9 +34,15 @@ class CallGPTNode:
                 }),
                 "system_msg": ("STRING", {"default": ""}),
                 "user_input": ("STRING", {"help": "請描述您的問題。"}),
-                "img_base64": ("STRING", {"default": ""}),
                 "history": ("INT", {"default": 5, "min": 0, "max": 20}),
                 "max_tokens": ("INT", {"default": 4096, "min": 512, "max": 8192}),
+            },
+            "optional": {
+                "image_1": ("IMAGE",),
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "image_5": ("IMAGE",),
             }
         }
 
@@ -29,7 +51,8 @@ class CallGPTNode:
     FUNCTION = "generate_prompt"
     CATEGORY = "🐊自訂"
 
-    def generate_prompt(self, ai_type, model, api_key, system_msg, user_input, img_base64, history, max_tokens):
+    def generate_prompt(self, ai_type, model, api_key, system_msg, user_input, history, max_tokens, 
+                        image_1=None, image_2=None, image_3=None, image_4=None, image_5=None):
         # 驗證 API key
         if not api_key or not isinstance(api_key, str) or len(api_key.strip()) == 0:
             raise ValueError("❌ API Key 不能為空")
@@ -52,9 +75,11 @@ class CallGPTNode:
 
         # 使用者輸入
         _content = [{ "type": "text", "text": user_input }]
-        if img_base64:
-            img_data_url = "data:image/png;base64," + img_base64
-            _content.append({ "type": "image_url", "image_url": {"url": img_data_url} })
+
+        # 處理多張影像輸入
+        for img in [image_1, image_2, image_3, image_4, image_5]:
+            if img is not None:
+                _content.append({ "type": "image_url", "image_url": {"url": tensor_to_b64(img)} })
 
         self.TEMP_INPUTS.append({
                         "role": "user",
