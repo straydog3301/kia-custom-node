@@ -13,7 +13,6 @@ class StoryboardReader:
             "required": {
                 "spreadsheet_id": ("STRING", {"multiline": False}),
                 "sheet_name": ("STRING", {"multiline": False}),
-                "skip_header": ("BOOLEAN", {"default": True}),
             },
             "optional": {
                 "execution_trigger": ("STRING", {"forceInput": True, "default": ""}),
@@ -36,9 +35,9 @@ class StoryboardReader:
     OUTPUT_IS_LIST = (True, True, True, True, True, True, False)
     
     FUNCTION = "read_sheet_to_arrays"
-    CATEGORY = "🐊自訂"
+    CATEGORY = "utils/GoogleSheets"
 
-    def read_sheet_to_arrays(self, spreadsheet_id, sheet_name, skip_header, execution_trigger=""):
+    def read_sheet_to_arrays(self, spreadsheet_id, sheet_name, execution_trigger=""):
         encoded_sheet_name = urllib.parse.quote(sheet_name)
         url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}"
 
@@ -52,7 +51,8 @@ class StoryboardReader:
             if not data:
                 return ([], [], [], [], [], [], "[]")
 
-            if skip_header and len(data) > 1:
+            # 移除表頭（已確認試算表每列都有表頭，直接刪除第一列)
+            if len(data) > 1:
                 data = data[1:]
 
             col_id, col_sec, col_char, col_scene, col_desc, col_seedance = [], [], [], [], [], []
@@ -96,14 +96,15 @@ class StoryboardReader:
                             char_str_to_send = json.dumps([unescaped], ensure_ascii=False)
                     else:
                         char_str_to_send = "[]"
-
-                col_id.append(row[0])
+                
+                # 安全壓入所有欄位，確保即使為空值也能正常新增（不跳過）
+                col_id.append(str(row[0]))
                 col_sec.append(sec_float)
-                col_char.append(char_str_to_send) # 🌟 壓入清洗完畢的 JSON 字串，例如 '["潔西卡"]'
-                col_scene.append(row[3])
-                col_desc.append(row[4])
-                col_seedance.append(row[5])
-
+                col_char.append(char_str_to_send)
+                col_scene.append(str(row[3]))
+                col_desc.append(str(row[4]))
+                col_seedance.append(str(row[5]))
+                
                 json_data.append({
                     "鏡號": row[0], "秒數": sec_float, "角色": json.loads(char_str_to_send),
                     "場景": row[3], "中文說明": row[4], "seedance提詞": row[5]

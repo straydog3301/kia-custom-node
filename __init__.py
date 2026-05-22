@@ -6,7 +6,7 @@ from .src.storyboard_inputter import StoryboardInputter
 from .src.storyboard_reader import StoryboardReader
 from .src.call_nano_banana import AuerBananaNode
 from .src.auer_image_gen import AuerImageGenNode
-from .src.storycoard_role_parser import StoryboardRoleParser
+from .src.storyboard_role_parser import StoryboardRoleParser
 from .src.database_path_reader import DatabasePathReader
 from .src.folder_image_stitcher import FolderImageStitcher
 

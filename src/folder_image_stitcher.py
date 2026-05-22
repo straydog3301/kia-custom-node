@@ -27,9 +27,13 @@ class FolderImageStitcher:
     CATEGORY = "🐊自訂"
 
     def stitch_images(self, folder_path, max_dimension, stitch_direction, execution_trigger=""):
-        # 驗證資料夾是否存在
+        # 如果未提供路徑，回傳 null
+        if not folder_path:
+            return (None, None)
+
+        # 驗證資料夾是否存在，若不存在回傳 null
         if not os.path.isdir(folder_path):
-            raise ValueError(f"資料夾不存在: {folder_path}")
+            return (None, None)
 
         # 支援的圖像格式
         image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp', '.tiff'}
@@ -41,8 +45,9 @@ class FolderImageStitcher:
             if os.path.isfile(file_path) and os.path.splitext(file)[1].lower() in image_extensions:
                 image_files.append(file_path)
 
+        # 若未找到圖像，回傳 null
         if not image_files:
-            raise ValueError(f"資料夾中未找到圖像文件: {folder_path}")
+            return (None, None)
 
         # 讀取所有圖像
         images = []
@@ -54,8 +59,9 @@ class FolderImageStitcher:
                 print(f"無法讀取圖像 {img_path}: {str(e)}")
                 continue
 
+        # 若無任何可用圖像，回傳 null
         if not images:
-            raise ValueError(f"無法讀取任何圖像文件")
+            return (None, None)
 
         # 拼接圖像
         if stitch_direction == "horizontal":
