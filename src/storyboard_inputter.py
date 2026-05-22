@@ -1,6 +1,7 @@
 import requests
 import json
 import re
+import urllib.parse
 
 class StoryboardInputter:
     def __init__(self):
@@ -22,7 +23,7 @@ class StoryboardInputter:
     CATEGORY = "🐊自訂"
 
     def process_and_send(self, shot_data_input, spreadsheet_id, sheet_name):
-        api_url = "https://script.google.com/macros/s/AKfycbz9K-M88yx6D2HS_da5zBwlwuxaA_xa2FPyq2b4Gyn7xTM872Ka953-DEl8B-Diy9s1xQ/exec"
+        api_url = "https://script.google.com/macros/s/AKfycbyj_2VJQFCl2kMVIHmD39kxbtYA_PHR0409-kuk8ML3zIV1vHuLICxGZfqbgqbmRIoSKw/exec"
         
         # --- 步驟 1: 字串清洗與解析 ---
         cleaned_input = shot_data_input.strip()
@@ -45,6 +46,7 @@ class StoryboardInputter:
         # --- 步驟 2: 發送資料 ---
         success_count = 0
         error_msg = ""
+        returned_gid = None
         
         for shot in data_list:
             # 檢查必要欄位是否存在（避免發送空資料）
@@ -64,15 +66,30 @@ class StoryboardInputter:
                     headers=headers, 
                     timeout=30  # 稍微提高 timeout 防止 Google 伺服器偶爾超時
                 )
-                if "Success" in response.text:
-                    success_count += 1
-                else:
-                    error_msg = response.text
+                
+                # 嘗試解析回傳的 JSON 資料
+                try:
+                    res_json = response.json()
+                    if res_json.get("status") == "Success":
+                        success_count += 1
+                        returned_gid = res_json.get("gid")
+                    else:
+                        error_msg = res_json.get("message", response.text)
+                except:
+                    # 相容性備案：如果回傳不是 JSON，則檢查原始文字
+                    if "Success" in response.text:
+                        success_count += 1
+                    else:
+                        error_msg = response.text
+
             except Exception as e:
                 error_msg = str(e)
 
         if success_count > 0:
-            status = f"✅ 成功寫入 {success_count} 筆分鏡到工作表: {sheet_name}"
+            base_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+            # 如果有拿到 gid 就用 #gid 定位，否則用工作表名稱定位
+            sheet_url = f"{base_url}#gid={returned_gid}" if returned_gid is not None else f"{base_url}?range={urllib.parse.quote(sheet_name)}!A1"
+            status = f"✅ 成功寫入 {success_count} 筆分鏡到工作表: {sheet_name} [開啟試算表]({sheet_url})"
         else:
             status = f"❌ 寫入失敗。錯誤原因: {error_msg}"
             

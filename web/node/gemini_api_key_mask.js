@@ -1,6 +1,5 @@
 import { app } from "/scripts/app.js";
 
-const GEMINI_NODE_NAME = "NanoBananaGeminiImageNode";
 const API_KEY_WIDGET_NAME = ["password", "api_key"];
 
 app.registerExtension({
@@ -21,30 +20,25 @@ app.registerExtension({
             
             // Get reference to this node
             const node = this;
-            
-            // Find the api_key widget after a small delay to ensure it's initialized
-            requestAnimationFrame(() => {
-                const apiKeyWidget = node.widgets?.find(w => API_KEY_WIDGET_NAME.includes(w.name));
-                if (!apiKeyWidget) {
-                    console.log("[NanoBanana] API key widget not found");
-                    return;
-                }
+
+            // Find the api_key widget
+            const apiKeyWidget = node.widgets?.find(w => API_KEY_WIDGET_NAME.includes(w.name));
+            if (apiKeyWidget) {
                 console.log("[NanoBanana] Setting up API key masking for widget:", apiKeyWidget);
                 
-                // Store the actual API key value
-                let actualApiKey = apiKeyWidget.value || "";
-                let isShowingReal = false;
+                // Use properties on the widget to avoid closure issues
+                apiKeyWidget._actualApiKey = (apiKeyWidget.value && !apiKeyWidget.value.includes("*")) ? apiKeyWidget.value : "";
+                apiKeyWidget._isShowingReal = false;
                 
                 // Helper function to mask the API key
                 function maskApiKey(key) {
                     if (!key || key.length === 0) return "";
-                    if (key.includes("*")) return key; // Already masked
-                    
+
                     // For short keys, mask everything
                     if (key.length <= 6) {
                         return "*".repeat(key.length);
                     }
-                    
+
                     // Show first 2 and last 2 characters
                     const firstPart = key.substring(0, 2);
                     const lastPart = key.substring(key.length - 2);
@@ -59,41 +53,34 @@ app.registerExtension({
                 // Override the callback to capture real value
                 apiKeyWidget.callback = function(v) {
                     // Skip if the value is masked (contains asterisks)
-                    if (v && v.includes("*") && actualApiKey) {
+                    if (v && v.includes("*")) {
                         // Don't update with masked value
-                        this.value = isShowingReal ? actualApiKey : maskApiKey(actualApiKey);
+                        this.value = this._isShowingReal ? this._actualApiKey : maskApiKey(this._actualApiKey);
                         return;
                     }
                     
                     // Store the actual value
-                    actualApiKey = v || "";
+                    this._actualApiKey = v || "";
                     
                     // Call original callback if it exists
                     if (origCallback) {
-                        origCallback.call(this, v);
+                        origCallback.call(this, this._actualApiKey);
                     }
                     
                     // Update display
-                    if (!isShowingReal) {
-                        this.value = maskApiKey(actualApiKey);
+                    if (!this._isShowingReal) {
+                        this.value = maskApiKey(this._actualApiKey);
                     }
                 };
                 
-                // If there's already a value, mask it
-                if (apiKeyWidget.value && !apiKeyWidget.value.includes("*")) {
-                    actualApiKey = apiKeyWidget.value;
-                    apiKeyWidget.value = maskApiKey(actualApiKey);
-                }
-                
                 // Store actual value getter for serialization
                 apiKeyWidget.getActualValue = function() {
-                    return actualApiKey;
+                    return this._actualApiKey || "";
                 };
                 
                 // Override serialization - keep API key for API format
                 apiKeyWidget.serializeValue = function() {
-                    // Return actual API key for API format (used programmatically)
-                    return actualApiKey;
+                    return this._actualApiKey || "";
                 };
                 
                 // Override computeSize to ensure the widget value is used correctly
@@ -103,16 +90,22 @@ app.registerExtension({
                         // Temporarily store the display value
                         const tempVal = this.value;
                         // Use actual value for computation
-                        this.value = actualApiKey;
+                        this.value = this._actualApiKey || "";
                         const result = origComputeSize.call(this, width);
                         // Restore display value
                         this.value = tempVal;
                         return result;
                     };
                 }
+
+                // Initial mask if value exists
+                if (apiKeyWidget.value && !apiKeyWidget.value.includes("*")) {
+                    apiKeyWidget._actualApiKey = apiKeyWidget.value;
+                    apiKeyWidget.value = maskApiKey(apiKeyWidget._actualApiKey);
+                }
                 
                 console.log("[NanoBanana] API key masking setup complete");
-            });
+            }
         };
         
         // Override onSerialize to EXCLUDE API key from exports
