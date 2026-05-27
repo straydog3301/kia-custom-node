@@ -38,6 +38,7 @@ class CallGPTNode:
                 "max_tokens": ("INT", {"default": 4096, "min": 512, "max": 8192}),
             },
             "optional": {
+                "execution_trigger": ("STRING", {"forceInput": True, "default": ""}),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
                 "image_3": ("IMAGE",),
@@ -51,7 +52,7 @@ class CallGPTNode:
     FUNCTION = "generate_prompt"
     CATEGORY = "🐊自訂"
 
-    def generate_prompt(self, ai_type, model, api_key, system_msg, user_input, history, max_tokens, 
+    def generate_prompt(self, ai_type, model, api_key, system_msg, user_input, history, max_tokens, execution_trigger="", 
                         image_1=None, image_2=None, image_3=None, image_4=None, image_5=None):
         # 驗證 API key
         if not api_key or not isinstance(api_key, str) or len(api_key.strip()) == 0:

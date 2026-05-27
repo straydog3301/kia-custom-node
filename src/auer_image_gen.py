@@ -70,6 +70,7 @@ class AuerImageGenNode:
                                            "label_off": "正常送出"}),
             },
             "optional": {
+                "execution_trigger": ("STRING", {"forceInput": True, "default": ""}),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
                 "image_3": ("IMAGE",),
@@ -296,7 +297,7 @@ class AuerImageGenNode:
 
     # ── 主入口 ─────────────────────────────────────────────────
     def call_api(self, username, password, prompt,
-                 reuse_chat=False, dry_run=False,
+                 reuse_chat=False, dry_run=False, execution_trigger="",
                  image_1=None, image_2=None, image_3=None,
                  image_4=None, image_5=None):
 
